@@ -4,7 +4,6 @@ from urllib.parse import quote
 
 import mariadb
 from fastapi import FastAPI
-from langchain_core.documents import Document
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_mariadb import MariaDBStore
 from mariadb.connectionpool import ConnectionPool
@@ -61,6 +60,7 @@ async def lifespan(app: FastAPI):
         ssl=True,
     )
     yield
+    connection_pool.close()
 
 
 # Fast API object
@@ -84,19 +84,21 @@ def ingest_products():
             """,
             (COLLECTION_NAME,),
         )
-        for id, name, description, category in cursor:
-            document = Document(
-                page_content=description,
-                metadata={"id": id, "name": name, "category": category},
-            )
-            vector_store.add_documents([document])
-            print(f"Document added: {id}")
+        rows = cursor.fetchall()
+        vector_store.add_texts(
+            texts=[description for id, name, description, category in rows],
+            metadatas=[
+                {"id": id, "name": name, "category": category}
+                for id, name, description, category in rows
+            ],
+        )
+
     return {"status": "Ingestion completed"}
 
 
 # /search-products endpoint
 @app.get("/search-products")
-def search_products(search_query: str, category: str, k: int = 5):
+def search_products(search_query: str, category: str, k: int = 10):
     documents = vector_store.similarity_search(search_query, k, {"category": category})
     results = [
         {
