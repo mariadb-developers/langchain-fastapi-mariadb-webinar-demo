@@ -59,8 +59,11 @@ async def lifespan(app: FastAPI):
         database=DB_NAME,
         ssl=True,
     )
-    yield
-    connection_pool.close()
+
+    try:
+        yield
+    finally:
+        connection_pool.close()
 
 
 # Fast API object
