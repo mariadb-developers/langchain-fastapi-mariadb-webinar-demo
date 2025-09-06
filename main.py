@@ -20,40 +20,33 @@ DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
 EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_LENGTH = 3072
 EMBEDDING_TIMEOUT_SECS = int(os.getenv("EMBED_TIMEOUT_SECS", "30"))
+EMBEDDING_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "100"))
 COLLECTION_NAME = "product_descriptions"
-
-
-# App state
-embeddings: GoogleGenerativeAIEmbeddings
-vector_store: MariaDBStore
-connection_pool: ConnectionPool
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global embeddings, vector_store, connection_pool
-
     # Google GenAI embedder
-    embeddings = GoogleGenerativeAIEmbeddings(
+    app.state.embeddings = GoogleGenerativeAIEmbeddings(
         model=EMBEDDING_MODEL,
         task_type="SEMANTIC_SIMILARITY",
         request_options={"timeout": EMBEDDING_TIMEOUT_SECS},
     )
 
     # MariaDB LangChain vector store
-    vector_store = MariaDBStore(
-        embeddings=embeddings,
+    app.state.vector_store = MariaDBStore(
+        embeddings=app.state.embeddings,
         datasource=f"mariadb+mariadbconnector://{DB_USER}:{quote(DB_PASSWORD)}@{DB_HOST}:{DB_PORT}/{DB_NAME}?ssl=true",
         embedding_length=EMBEDDING_LENGTH,
         collection_name=COLLECTION_NAME,
         collection_metadata={
-            "embedder": embeddings.model,
+            "embedder": EMBEDDING_MODEL,
             "dimensions": EMBEDDING_LENGTH,
         },
     )
 
     # MariaDB connection pool
-    connection_pool = ConnectionPool(
+    app.state.connection_pool = ConnectionPool(
         pool_name="mariadb_pool",
         pool_size=DB_POOL_SIZE,
         host=DB_HOST,
@@ -67,7 +60,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        connection_pool.close()
+        app.state.connection_pool.close()
 
 
 # Fast API object
@@ -77,6 +70,9 @@ app = FastAPI(lifespan=lifespan)
 # /ingest-products endpoint
 @app.post("/ingest-products")
 def ingest_products():
+    connection_pool: ConnectionPool = app.state.connection_pool
+    vector_store: MariaDBStore = app.state.vector_store
+
     with connection_pool.get_connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
@@ -106,6 +102,7 @@ def ingest_products():
 # /search-products endpoint
 @app.get("/search-products")
 def search_products(search_query: str, category: str, k: int = 10):
+    vector_store: MariaDBStore = app.state.vector_store
     documents = vector_store.similarity_search(search_query, k, {"category": category})
     results = [
         {
