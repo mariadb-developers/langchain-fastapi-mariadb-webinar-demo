@@ -19,7 +19,9 @@ DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
 # Embedding model details
 EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_LENGTH = 3072
+EMBEDDING_TIMEOUT_SECS = int(os.getenv("EMBED_TIMEOUT_SECS", "30"))
 COLLECTION_NAME = "product_descriptions"
+
 
 # App state
 embeddings: GoogleGenerativeAIEmbeddings
@@ -33,7 +35,9 @@ async def lifespan(app: FastAPI):
 
     # Google GenAI embedder
     embeddings = GoogleGenerativeAIEmbeddings(
-        model=EMBEDDING_MODEL, task_type="SEMANTIC_SIMILARITY"
+        model=EMBEDDING_MODEL,
+        task_type="SEMANTIC_SIMILARITY",
+        request_options={"timeout": EMBEDDING_TIMEOUT_SECS},
     )
 
     # MariaDB LangChain vector store
