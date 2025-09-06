@@ -1,8 +1,8 @@
+from itertools import batched
 import os
 from contextlib import asynccontextmanager
 from urllib.parse import quote
 
-import mariadb
 from fastapi import FastAPI
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_mariadb import MariaDBStore
@@ -88,6 +88,8 @@ def ingest_products():
             (COLLECTION_NAME,),
         )
         rows = cursor.fetchall()
+
+    for rows in batched(rows, EMBEDDING_BATCH_SIZE):
         vector_store.add_texts(
             texts=[description for id, name, description, category in rows],
             metadatas=[
