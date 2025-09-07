@@ -1,6 +1,6 @@
-from itertools import batched
 import os
 from contextlib import asynccontextmanager
+from itertools import batched
 from urllib.parse import quote
 
 from fastapi import FastAPI
@@ -17,11 +17,11 @@ DB_NAME = os.getenv("DB_NAME", "demo")
 DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
 
 # Embedding model details
-EMBEDDING_MODEL = "gemini-embedding-001"
-EMBEDDING_LENGTH = 3072
-EMBEDDING_TIMEOUT_SECS = int(os.getenv("EMBED_TIMEOUT_SECS", "30"))
-EMBEDDING_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "100"))
-COLLECTION_NAME = "product_descriptions"
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
+EMBEDDING_LENGTH = int(os.getenv("EMBEDDING_LENGTH", 3072))
+EMBEDDING_TIMEOUT_SECS = int(os.getenv("EMBED_TIMEOUT_SECS", 30))
+EMBEDDING_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", 100))
+COLLECTION_NAME = "products.description"
 
 
 @asynccontextmanager
