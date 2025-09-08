@@ -3,7 +3,7 @@ import os
 from contextlib import asynccontextmanager
 from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.security import APIKeyHeader
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_mariadb import MariaDBStore
@@ -88,12 +88,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-# /ingest-products endpoint
-@app.post("/ingest-products")
-def ingest_products(_: str = Depends(verify_api_key)):
-    connection_pool: ConnectionPool = app.state.connection_pool
-    vector_store: MariaDBStore = app.state.vector_store
-
+def run_product_ingestion(connection_pool: ConnectionPool, vector_store: MariaDBStore):
     with connection_pool.get_connection() as connection, connection.cursor() as cursor:
         # Delete embeddings for products that no longer exist (orphaned embeddings)
         cursor.execute(
@@ -166,7 +161,21 @@ def ingest_products(_: str = Depends(verify_api_key)):
                 log.info(f"Ingested batch of {len(batch_rows)} products")
 
     log.info(f"Total products ingested: {total_ingested}")
-    return {"status": "Ingestion completed", "products_processed": total_ingested}
+
+
+# /ingest-products endpoint
+@app.post("/ingest-products")
+def ingest_products(
+    background_tasks: BackgroundTasks, _: str = Depends(verify_api_key)
+):
+    connection_pool: ConnectionPool = app.state.connection_pool
+    vector_store: MariaDBStore = app.state.vector_store
+    background_tasks.add_task(run_product_ingestion, connection_pool, vector_store)
+
+    return {
+        "status": "Ingestion started",
+        "message": "Product ingestion is running in the background",
+    }
 
 
 # /search-products endpoint
