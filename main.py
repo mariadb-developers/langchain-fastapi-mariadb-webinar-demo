@@ -1,10 +1,10 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from itertools import batched
 from urllib.parse import quote
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import APIKeyHeader
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_mariadb import MariaDBStore
 from mariadb.connectionpool import ConnectionPool
@@ -33,7 +33,18 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# API security
+DEMO_API_KEY = os.getenv("DEMO_API_KEY", "demo-key-123")
+api_key_header = APIKeyHeader(name="X-API-Key")
 
+
+# API key verification
+def verify_api_key(api_key: str = Depends(api_key_header)):
+    if api_key != DEMO_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+# Lifespan event
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Google GenAI embedder
@@ -79,7 +90,7 @@ app = FastAPI(lifespan=lifespan)
 
 # /ingest-products endpoint
 @app.post("/ingest-products")
-def ingest_products():
+def ingest_products(_: str = Depends(verify_api_key)):
     connection_pool: ConnectionPool = app.state.connection_pool
     vector_store: MariaDBStore = app.state.vector_store
 
@@ -160,7 +171,9 @@ def ingest_products():
 
 # /search-products endpoint
 @app.get("/search-products")
-def search_products(search_query: str, category: str, k: int = 10):
+def search_products(
+    search_query: str, category: str, k: int = 10, _: str = Depends(verify_api_key)
+):
     vector_store: MariaDBStore = app.state.vector_store
     documents = vector_store.similarity_search(search_query, k, {"category": category})
     results = [
