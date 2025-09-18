@@ -90,6 +90,13 @@ app = FastAPI(lifespan=lifespan)
 
 def run_product_ingestion(connection_pool: ConnectionPool, vector_store: MariaDBStore):
     with connection_pool.get_connection() as connection, connection.cursor() as cursor:
+        # Add created_at column if it doesn't exist
+        cursor.execute(
+            """
+            ALTER TABLE langchain_embedding
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+            """)
+
         # Delete embeddings for products that no longer exist (orphaned embeddings)
         cursor.execute(
             """
@@ -200,13 +207,7 @@ def main():
     import uvicorn
 
     log.info("Starting FastAPI backend server...")
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=False,
-        log_level="info"
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False, log_level="info")
 
 
 if __name__ in {"__main__", "__mp_main__"}:
