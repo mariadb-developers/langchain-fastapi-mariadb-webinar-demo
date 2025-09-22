@@ -1,5 +1,7 @@
 # MariaDB + LangChain + FastAPI + NiceGUI demo
 
+![Demo Screenshot](https://repository-images.githubusercontent.com/1052128512/6db456c6-83b3-46de-893a-5ed7fcaaed14)
+
 This example application shows how to use MariaDB, LangChain, FastAPI, and NiceGUI to implement the
 search functionality for an online store. It uses semantic search storing vectors created by
 Google Generative AI in [MariaDB](https://mariadb.com/).
