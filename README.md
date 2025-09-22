@@ -56,15 +56,15 @@ git clone https://github.com/mariadb-developers/langchain-fastapi-mariadb-webina
 cd langchain-fastapi-mariadb-webinar-demo
 ```
 
-Define the following OS environment variables with the values corresponding to you MariaDB database connection as well as the Google Generative AI API key:
+Define the OS environment variables using the values corresponding to you MariaDB database connection and Google Generative AI API key. For example, on Linux:
 
 ```
-DB_HOST
-DB_PORT
-DB_USER
-DB_PASSWORD
-DB_NAME
-GOOGLE_API_KEY
+export DB_HOST=127.0.0.1
+export DB_PORT=3306
+export DB_USER=root
+export DB_PASSWORD=password
+export DB_NAME=demo
+export GOOGLE_API_KEY=key1234567
 ```
 
 Alternatively, modify the default values for this variables in the [backend.py](backend.py) file.
@@ -92,7 +92,14 @@ Run the FastAPI backend:
 python backend.py
 ```
 
+## Calculate and store vector embeddings
+
+Go to http://localhost:8000/docs, authorize (use this API key: `demo-key-123`), and invoke the POST `/ingest-products` endpoint
+to calculate and store the vector embeddings. Check the logs in the terminal to confirm 500 products are ingested.
+
 ## Running the frontend
+
+**Important!** Run the POST `/ingest-products` endpoint before running using the frontend!
 
 Run the NiceGUI frontend in a separate terminal:
 

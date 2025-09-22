@@ -323,7 +323,7 @@ class OutdoorGearStore:
 
                     query_input2 = (
                         ui.input(
-                            label="What are you looking for?",
+                            label="What are you looking for? (type and press ENTER)",
                             placeholder="e.g., waterproof hiking boots, camping tent, climbing gear...",
                         )
                         .classes("flex-grow min-w-80")
